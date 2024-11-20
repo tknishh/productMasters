@@ -1,6 +1,7 @@
 import streamlit as st
 from database import Database
 from utils import process_agent_query
+from openai import OpenAI
 
 # Initialize session state if needed
 if 'db' not in st.session_state:
@@ -14,6 +15,18 @@ st.header("Chat with Agent")
 st.sidebar.write("Debug Information:")
 st.sidebar.write(f"OpenAI Client initialized: {st.session_state.openai_client is not None}")
 st.sidebar.write(f"API Key present: {st.session_state.api_key is not None}")
+
+# Check for API key at the start of chat
+if 'api_key' not in st.session_state or not st.session_state.api_key:
+    st.warning("OpenAI API key is required to chat with agents.")
+    api_key = st.text_input("Enter your OpenAI API key:", type="password")
+    if api_key:
+        st.session_state.api_key = api_key
+        # Initialize OpenAI client
+        st.session_state.openai_client = OpenAI(api_key=api_key)
+        st.success("API key saved! You can now chat with agents.")
+        st.rerun()
+    st.stop()
 
 # Get all agents
 agents = st.session_state.db.get_agents()
