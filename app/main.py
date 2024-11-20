@@ -1,5 +1,4 @@
 import streamlit as st
-import ssl
 import httpx
 from openai import OpenAI
 from database import Database

@@ -3,3 +3,6 @@ node_modules
 env
 .DS_Store
 __pycache__
+
+# Streamlit secrets
+.streamlit/secrets.toml

@@ -1,8 +1,7 @@
 from openai import OpenAI
-import json
-import os
+import streamlit as st
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY")
 
 def validate_api_key(api_key):
     try:
@@ -17,18 +16,47 @@ def validate_api_key(api_key):
         return False
 
 def process_agent_query(api_key, agent_data, user_input):
+    """
+    Process a user query using the specified agent
+    
+    Args:
+        api_key: OpenAI API key
+        agent_data: Dictionary containing agent information
+        user_input: User's message
+    """
     try:
-        client = OpenAI(api_key=api_key)
-        name, category, query_params = agent_data[1], agent_data[2], json.loads(agent_data[3])
+        # Add debug logging
+        st.sidebar.info("Initializing OpenAI client...")
         
-        system_prompt = f"""You are an AI assistant specialized in {category}.
+        # Create new client with explicit timeout
+        client = OpenAI(
+            api_key=api_key,
+            timeout=60.0,  # Add timeout parameter
+            max_retries=3  # Add retry attempts
+        )
+        
+        # Store client in session state for reuse
+        st.session_state['openai_client'] = client
+        
+        # Add debug logging
+        st.sidebar.info("Making API call...")
+        
+        # Construct system prompt using agent data
+        system_prompt = f"""You are an AI assistant specialized in {agent_data['expertise']}.
+Role: {agent_data['name']}
+Type: {agent_data['type']}
+Description: {agent_data['description']}
+
 Your task is to provide information based on the following parameters:
-{json.dumps(query_params, indent=2)}
+{', '.join(agent_data['parameters'])}
 
-Please provide detailed and accurate responses while staying within these parameters."""
+{agent_data['prompt']}
 
+Please provide detailed and accurate responses while staying within your defined expertise and parameters."""
+
+        # Make API call
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_input}
@@ -37,6 +65,16 @@ Please provide detailed and accurate responses while staying within these parame
             max_tokens=1000
         )
         
+        # Extract and return response
         return response.choices[0].message.content
+        
     except Exception as e:
-        return f"Error processing request: {str(e)}"
+        # More detailed error handling
+        error_msg = f"Error details: {str(e)}"
+        if "Connection" in str(e):
+            error_msg += "\nPlease check your internet connection and try again."
+        elif "Authentication" in str(e):
+            error_msg += "\nPlease verify your API key is correct."
+            
+        st.sidebar.error(error_msg)
+        raise Exception(f"Failed to process query: {error_msg}")
