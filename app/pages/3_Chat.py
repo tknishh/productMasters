@@ -92,12 +92,22 @@ if selected_agent:
                         'configs': agent_details.get('configs', {})
                     }
                     
-                    # Get response
-                    response = process_agent_query(
-                        st.session_state.api_key,
-                        agent_data,  # Pass full agent data
-                        user_input
-                    )
+                    # Get response with timeout handling
+                    try:
+                        response = process_agent_query(
+                            st.session_state.api_key,
+                            agent_data,
+                            user_input
+                        )
+                    except TimeoutError:
+                        raise Exception("Request timed out. Please try again.")
+                    except ConnectionError:
+                        raise Exception("Unable to connect to OpenAI. Please check your internet connection.")
+                    except Exception as e:
+                        raise Exception(f"OpenAI API error: {str(e)}")
+                    
+                    if not response:
+                        raise Exception("Received empty response from the agent.")
                     
                     # Display response
                     st.markdown(response)
@@ -109,8 +119,10 @@ if selected_agent:
                     })
                     
                 except Exception as e:
-                    st.error(f"Error: {str(e)}")
-                    st.sidebar.error(f"Full error: {repr(e)}")
+                    error_message = str(e)
+                    st.error(f"Error: {error_message}")
+                    st.sidebar.error(f"Detailed error: {repr(e)}")
+                    st.sidebar.info("Try refreshing the page or checking your API key if the error persists.")
 
 # Chat controls
 with st.sidebar:

@@ -1,5 +1,6 @@
 from openai import OpenAI
 import streamlit as st
+import httpx
 
 OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY")
 
@@ -31,8 +32,7 @@ def process_agent_query(api_key, agent_data, user_input):
         # Create new client with explicit timeout
         client = OpenAI(
             api_key=api_key,
-            timeout=60.0,  # Add timeout parameter
-            max_retries=3  # Add retry attempts
+            http_client=httpx.Client(verify=False)
         )
         
         # Store client in session state for reuse
@@ -56,7 +56,7 @@ Please provide detailed and accurate responses while staying within your defined
 
         # Make API call
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_input}
